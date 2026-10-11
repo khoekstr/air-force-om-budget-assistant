@@ -81,7 +81,7 @@ function syncBudgetLevels(){
 }
 function renderParentBridge(b){
  $('view-kicker').textContent='YEAR-TO-YEAR COMPARISON';$('chart-title').textContent=`FY${year-1} to FY${year} · ${data.entities[entity]}`;
- $('chart-subtitle').textContent='J-book summary';
+ $('chart-subtitle').textContent='Follow the J-book: its prior-year snapshot and new request. This summary combines program changes.';
  rows=[makeRow(year===2025?'FY2024 estimate':`FY${year-1} source baseline`,b.start),makeRow('Price changes',b.price,'price',true),makeRow('Net program changes',b.program,b.program<0?'decrease':'increase',true)];
  if(b.rounding)rows.push(makeRow('Source rounding',b.rounding,'rounding',true));rows.push(makeRow(`FY${year} request`,b.request));
  $('stats').innerHTML=stat('Source baseline',b.start)+stat('New request',b.request)+stat('Change',b.request-b.start,true);
@@ -101,3 +101,4 @@ function relatedDifferences(y,e){
  if(!peer)return '';
  return `<section class="related-differences"><h3>Related reconciliation differences · FY${y}</h3><div class="difference-pair">${[[entity,e],[peer[0].slice(5),peer[1]]].map(([id,r])=>`<div><span class="difference-label">SAG ${id} · ${esc(data.entities[id])}</span><strong>${reportValue(r.adjustments-r.reportedAdjustments,true)}</strong>${reportRef(r,'Execution source')}</div>`).join('')}</div><p class="footnote">Difference = (Updated Budget − Enacted) − listed adjustment components. These equal and opposite differences occur within the same Budget Activity; that does not establish a transfer or explain their cause.</p></section>`;
 }
+
