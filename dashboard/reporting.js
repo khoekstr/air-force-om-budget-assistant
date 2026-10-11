@@ -75,11 +75,25 @@ function stageReport(stage,y,e,b){
   if(['increase','decrease'].includes(type))return '<p>These are changes to program requirements, including any removal of temporary funding.</p>'+documentedDrivers(y,b.summaryOnly?null:type);
   if(type==='price')return '<p>Price changes reflect cost factors such as inflation and pay rates, separately from program changes.</p>';
   if(type==='transfer')return '<p>Transfers move funding between activities or accounts. A transfer does not by itself establish an overall Air Force increase or reduction.</p>'+documentedDrivers(y,'transfer');
-  if(type==='adjust')return `<p>These adjustments bring the source’s starting position to a normalized baseline of ${reportValue(b.baseline)} before the proposed changes.</p>`;
+  if(type==='adjust')return baselineReport(y,b);
   if(type==='rounding')return '<p>This reconciles rounded source figures; it is not a funding action.</p>';
-  return `<p>The prior-year position used when this J-book was prepared.${y===2025?' FY2024 is an estimate, not final Enacted funding.':''}</p>`;
+  return `<p>This is the prior-year position used when the FY${y} J-book was prepared.${y===2025?' FY2024 is an estimate, not final Enacted funding.':' The source’s “Appropriated” label does not guarantee the same amount as Enacted in the execution report.'}</p>`+bridgeRelationship(y,b);
  }
  return '<p>No additional detail is established for this selection.</p>';
+}
+function bridgeRelationship(y,b){
+ const e=data.execution[`${y-1}-${entity}`];
+ let html='<p>The J-book comparison baseline is a snapshot at preparation. It is not automatically Updated Budget (“Net”) in the execution report, which may include later adjustments.</p>';
+ if(y===2026&&entity==='021A')html+=`<p>For this SAG, the J-book places ${reportValue(350000)} in fact-of-life changes after its “Appropriated” starting position. The FY2025 year-end report includes that funding in Enacted. The one-year action detail identifies it as one-time Presidential Airlift Support Requirement funding.</p>`;
+ if(e)html+=reportMore('Compare the source positions',`<p>FY${y} J-book · FY${y-1} starting position: <strong>${reportValue(b.start)}</strong>; comparison baseline: <strong>${reportValue(b.baseline??b.start)}</strong>.</p>`+reportRef(b,`FY${y} J-book · PDF p. ${b.page}`)+`<p>FY${y-1} · ${esc(e.sourceKind||'execution report')}${e.asof?' · as of '+esc(e.asof):''}: Enacted <strong>${reportValue(e.enacted)}</strong>; Updated Budget <strong>${reportValue(e.updated)}</strong>.</p>`+reportRef(e,`FY${y-1} source · PDF p. ${e.page}`)+'<p>These are separate source snapshots, not additional steps in this chart. A numeric difference alone does not establish its cause.</p>');
+ return html;
+}
+function baselineReport(y,b){
+ let html=`<p>The J-book moves from <strong>${reportValue(b.start)}</strong>, through <strong>${reportValue(b.adjustments,true)}</strong> in baseline adjustments, to its normalized comparison baseline of <strong>${reportValue(b.baseline)}</strong>, before next-year price, transfer, and program changes.</p>`;
+ if(y===2026&&entity==='021A')html+=`<h4>Documented baseline components</h4>${reportComponents([{value:350000,label:'Fact-of-life changes — one-time Presidential Airlift Support Requirement funding; classified in Enacted in the year-end report.'}])}<p><strong>Supplemental funding: approximately 3.3 $M (3,300 $K).</strong> This is the rounded component identified in the dashboard’s source note. Its specific purpose is not established by the loaded detail.</p>`;
+ else if(b.baselineDetails?.items?.length)html+=reportComponents(b.baselineDetails.items);
+ else html+='<p>The net adjustment is calculated from the two reported positions. Individual components and their purposes are not established in the loaded detail; consult the cited J-book reconciliation.</p>';
+ return html+reportRef(b,`FY${y} J-book · OP-5, ${entity} · PDF p. ${b.page}`)+bridgeRelationship(y,b)+'<p class="footnote">Totals use source precision; displayed component amounts are rounded.</p>';
 }
 function renderReport(){
  const {y,stage,e,b}=reportContext();$('drivers').innerHTML='';
@@ -90,7 +104,7 @@ function renderReport(){
   $('show-overview').hidden=false;
  }else if(view==='bridge'&&b){
   $('narrative-title').textContent='What changed';
-  $('narrative').innerHTML=`<p>The request changed by ${reportValue(b.request-b.start,true)}: ${reportValue(b.price,true)} in price and ${reportValue(b.program,true)} in net program changes${!b.summaryOnly&&b.transfers?`, with ${reportValue(b.transfers,true)} in transfers`:''}.</p>`+reportDrill(y)+documentedDrivers(y);
+  $('narrative').innerHTML=`<p>The request changed by ${reportValue(b.request-b.start,true)}: ${reportValue(b.price,true)} in price and ${reportValue(b.program,true)} in net program changes${!b.summaryOnly&&b.transfers?`, with ${reportValue(b.transfers,true)} in transfers`:''}.</p>`+(b.adjustments?`<p>Baseline adjustments of ${reportValue(b.adjustments,true)} are also included in that overall change. Select that bar for the comparison baseline and its source detail.</p>`:'')+reportMore('How this J-book relates to One Year’s Budget',bridgeRelationship(y,b))+reportDrill(y)+documentedDrivers(y);
  }else if(view==='single'&&e){
   $('narrative-title').textContent='Funding summary';
   $('narrative').innerHTML=requestText(y)+reportDrill(y);
@@ -133,3 +147,4 @@ function trendDriverHighlights(){
   return `<li><div class="driver-highlight-heading"><strong>${esc(d.title)}</strong><span>${reportValue(d.value,metric!=='obligations')}</span></div><small>FY${d.y} · ${esc(area)}</small><p>${esc(summary)}</p>${reportMore('Source detail',`${metric==='budget'||metric==='congress'?`<p>${esc(d.detail)}</p>`:''}${reportRef(d.ref,`FY${d.y} source detail · PDF p. ${d.ref.page}`)}`)}</li>`;
  }).join('')}</ol></section>`;
 }
+
