@@ -2,7 +2,7 @@
 let guideYear=null,guideRouting=false;
 const guideTopics={sources:'Why do the documents show different figures?',terms:'What do the terms mean?',trend:'How has funding changed over time?',adjustments:'How did funding change after enactment?',changes:'What changed most?',congress:'Where did Congress add or reduce funding?',attention:'What deserves a closer look?',patterns:'What patterns repeat?',explore:'Help me explore a budget area'};
 function guideMoney(n){return `${n>0?'+':''}${(n/1000).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})} $M`}
-function guideHref(o={}){return '#dashboard?'+new URLSearchParams({view:o.view||'single',year:String(o.year||guideYear||2025),entity:o.entity||'3400',metric:o.metric||'budget',...(o.stage?{stage:o.stage}:{}),...(o.years?{years:o.years.join(',')}:{}),...(o.figureYear?{figureYear:String(o.figureYear)}:{})}).toString()}
+function guideHref(o={}){return '#dashboard?'+new URLSearchParams({view:o.view||'single',year:String(o.year||guideYear||2025),entity:o.entity||'3400',metric:o.metric||'budget',...(o.stage?{stage:o.stage}:{}),...(o.years?{years:o.years.join(',')}:{}),...(o.figureYear?{figureYear:String(o.figureYear)}:{}),...(o.units?{units:String(o.units)}:{})}).toString()}
 function guideLink(o,label='Explore in dashboard'){return `<a class="guide-detail" href="${esc(guideHref(o))}">${esc(label)}</a>`}
 function guideSource(r){return r?.source?`<a class="guide-source" href="${esc(r.source)}#page=${r.page}" target="_blank" rel="noopener">Source · PDF p. ${r.page}</a>`:''}
 function guideResult(title,text,route,ref,extra=''){const brief=reportBrief(text,2),rest=text.slice(brief.length).trim();return `<article class="guide-result"><h3>${esc(title)}</h3><p>${esc(brief)}</p>${rest?reportMore('More context',`<p>${esc(rest)}</p>`):''}<div class="guide-result-actions">${guideLink(route)}${guideSource(ref)}${extra}</div></article>`}
@@ -67,6 +67,20 @@ function guideAsk(topic,ba){
  const turn=document.createElement('section');turn.className='guide-turn';turn.innerHTML=`<h3 class="example-question">${esc(text)}</h3><div class="guide-reply">${guideAnswer(topic,ba)}</div>`;
  $('guide-thread').innerHTML='';$('guide-thread').append(turn);turn.scrollIntoView({behavior:'smooth',block:'start'});
 }
+const sessionKey='af-om-dashboard-views-v1';
+let savedViews={};
+try{savedViews=JSON.parse(sessionStorage.getItem(sessionKey)||'{}')||{};}catch{}
+function rememberView(){
+ if(!data||$('dashboard').hidden||guideRouting)return;
+ savedViews[view]={view,year,entity,metric,years:[...selectedYears],units:$('units').value,stage:selected?.stage||selected?.label,figureYear:selected?.year};
+ try{sessionStorage.setItem(sessionKey,JSON.stringify(savedViews));}catch{}
+}
+function tabRoute(target){
+ rememberView();
+ if(target==='guide')return '#guide';
+ const saved=savedViews[target];
+ return guideHref(saved&&saved.view===target?saved:{view:target,entity,year:target==='bridge'?Math.min(2027,Math.max(2022,year+1)):year,metric,years:selectedYears,units:$('units').value});
+}
 function guideRoute(){
  if(!data)return;
  const isDashboard=location.hash.startsWith('#dashboard');
@@ -79,16 +93,18 @@ function guideRoute(){
  year=Math.max(view==='bridge'?2022:2021,Math.min(2027,Number(p.get('year'))||2025));
  entity=data.entities[p.get('entity')]?p.get('entity'):'3400';
  metric=['budget','obligations','congress','adjustments'].includes(p.get('metric'))?p.get('metric'):'budget';
- selectedYears=[...new Set((p.get('years')||'2021,2022,2023,2024,2025').split(',').map(Number).filter(y=>Number.isInteger(y)&&y>=2021&&y<=2027))];
- if(!selectedYears.length)selectedYears=[year];
+ selectedYears=[...new Set((p.has('years')?p.get('years'):'2021,2022,2023,2024,2025').split(',').map(Number).filter(y=>Number.isInteger(y)&&y>=2021&&y<=2027))];
+ if(!selectedYears.length&&!p.has('years'))selectedYears=[year];
+ $('units').value=['1','1000'].includes(p.get('units'))?p.get('units'):'1000';
  document.querySelectorAll('nav button').forEach(b=>{b.classList.toggle('active',b.dataset.view===view);b.setAttribute('aria-current',b.dataset.view===view?'page':'false')});
  yearControls();render();
  const index=rows.findIndex(r=>(r.stage||r.label)===p.get('stage')&&(view!=='trend'||r.year===(Number(p.get('figureYear'))||year)));
  if(index>=0&&rows[index].value!=null){selected=rows[index];explainFigure();document.querySelectorAll('#chart rect[data-index]').forEach(b=>{const on=+b.dataset.index===index;b.classList.toggle('selected-bar',on);b.setAttribute('aria-pressed',String(on))});}
  guideRouting=false;
+ rememberView();
  $('funding-graph').scrollIntoView({block:'start'});
 }
-function guideSync(){if(guideRouting||$('dashboard').hidden||!data)return;history.replaceState(null,'',guideHref({view,year,entity,metric,years:selectedYears,stage:selected?.stage||selected?.label,figureYear:selected?.year}));}
+function guideSync(){if(guideRouting||$('dashboard').hidden||!data)return;rememberView();history.replaceState(null,'',guideHref(savedViews[view]));}
 function initGuide(){
  $('jbook-dates').innerHTML=[[2021,'February 2020'],[2022,'May 2021'],[2023,'April 2022'],[2024,'March 2023'],[2025,'February 2024'],[2026,'June 2025'],[2027,'April 2026']].map(([fy,date])=>{const source=data.sources.find(s=>/jbook/i.test(s.source)&&s.source.includes(String(fy).slice(2)));return `<tr><th scope="row">FY${fy}</th><td>${source?sourceLink({...source,page:1},date):date}</td></tr>`}).join('');
  $('guide-status').hidden=true;$('guide-controls').disabled=false;
@@ -97,8 +113,11 @@ function initGuide(){
  $('guide-reset').onclick=()=>{$('guide-thread').innerHTML='';guideYear=null;$('guide-year').value='all';$('guide-welcome').scrollIntoView({behavior:'smooth'})};
  const oldRender=render;render=function(){oldRender();guideSync()};
  const oldExplain=explainFigure;explainFigure=function(){oldExplain();guideSync()};
- // The reset button was bound before render was wrapped.
+ // Rebind controls after render is wrapped so their state is saved immediately.
+ $('units').onchange=()=>render();
  $('show-overview').onclick=()=>render();
- document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(b.dataset.view==='guide'){location.hash='#guide';return;}location.hash=guideHref({view:b.dataset.view,year:b.dataset.view==='bridge'?Math.max(2022,year):year,entity,metric,years:selectedYears});});
+ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{location.hash=tabRoute(b.dataset.view);});
+ $('clear-view-settings').onclick=()=>{savedViews={};try{sessionStorage.removeItem(sessionKey);}catch{}location.hash=guideHref({view,year:2025,entity:'3400',metric:'budget',years:[2021,2022,2023,2024,2025],units:'1000'});guideRoute();};
  window.addEventListener('hashchange',guideRoute);guideRoute();
 }
+
