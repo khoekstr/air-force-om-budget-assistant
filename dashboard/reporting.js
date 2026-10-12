@@ -110,15 +110,19 @@ function renderReport(){
   $('narrative').innerHTML=requestText(y)+reportDrill(y);
  }else if(view==='trend'){
   $('narrative-title').textContent='Across the selected years';
-  const key=metric==='budget'?'updated':metric,values=rows.filter(r=>r.value!=null&&(metric!=='budget'||r.key==='updated')).sort((a,b)=>a.year-b.year);
-  const first=values[0],last=values.at(-1),label={updated:'Updated Budget',obligations:'Obligations',congress:'Congressional Action',adjustments:'Reprogramming / Adjustments'}[key];
-  $('narrative').innerHTML=values.length>1?`<p>${label} ${last.value>=first.value?'increased':'decreased'} by ${reportValue(Math.abs(last.value-first.value))} from FY${first.year} to FY${last.year}.</p>`:'<p>Select additional years to compare available figures.</p>';
+  const series=metric==='budget'?[['request','Budget Request'],['enacted','Enacted'],['updated','Updated Budget'],['obligations','Obligations']]:[['congress','Congressional Action'],['adjustments','Reprogramming / Adjustments']];
+  $('narrative').innerHTML=series.map(([key,label])=>{
+   const values=rows.filter(r=>r.key===key&&r.value!=null).sort((a,b)=>a.year-b.year),first=values[0],last=values.at(-1);
+   if(!first)return `<p>${label}: not reported for the selected years.</p>`;
+   if(values.length===1)return `<p>${label}: ${reportValue(first.value,metric==='changes')} in FY${first.year}; only one selected year is available.</p>`;
+   return `<p>${label} ${last.value===first.value?'was unchanged':last.value>first.value?'increased':'decreased'}${last.value===first.value?'':` by ${reportValue(Math.abs(last.value-first.value))}`} from FY${first.year} to FY${last.year}.</p>`;
+  }).join('');
  }
- if(view==='trend'&&!selected)$('narrative').innerHTML+=trendDriverHighlights();
+ if(view==='trend'&&!selected)$('narrative').innerHTML+=(metric==='changes'?trendDriverHighlights('congress')+trendDriverHighlights('adjustments'):trendDriverHighlights(metric));
  $('table-note').textContent='';
 }
 
-function trendDriverHighlights(){
+function trendDriverHighlights(metric){
  const entries=[],scope=id=>id===entity||(/^0[1-4][0-9][A-Z]$/.test(id)&&(entity==='3400'||parentBA(id)===entity));
  for(const y of selectedYears){
   if(metric==='budget'){
@@ -147,4 +151,5 @@ function trendDriverHighlights(){
   return `<li><div class="driver-highlight-heading"><strong>${esc(d.title)}</strong><span>${reportValue(d.value,metric!=='obligations')}</span></div><small>FY${d.y} · ${esc(area)}</small><p>${esc(summary)}</p>${reportMore('Source detail',`${metric==='budget'||metric==='congress'?`<p>${esc(d.detail)}</p>`:''}${reportRef(d.ref,`FY${d.y} source detail · PDF p. ${d.ref.page}`)}`)}</li>`;
  }).join('')}</ol></section>`;
 }
+
 

@@ -25,11 +25,11 @@ function renderInsights(){
  }
  const observations=view==='trend'&&!selected?selectedYears.map(y=>({y,e:data.execution[`${y}-${entity}`]})).filter(x=>x.e):e?[{y,e}]:[];
  if(view!=='bridge')for(const {y:fy,e:x} of observations){
-  if(adjustmentSelected&&(view!=='trend'||selected||['budget','adjustments'].includes(metric))&&x.adjustments!=null&&x.reportedAdjustments!=null&&Math.abs(x.adjustments-x.reportedAdjustments)>.001)
+  if(adjustmentSelected&&(view!=='trend'||selected||['budget','changes'].includes(metric))&&x.adjustments!=null&&x.reportedAdjustments!=null&&Math.abs(x.adjustments-x.reportedAdjustments)>.001)
    add(`FY${fy}: adjustment detail needs reconciliation`,`The component total differs from Updated Budget minus Enacted by ${fmt(x.adjustments-x.reportedAdjustments)}. ${offsetNote(fy,x)} The difference is established; its cause is not. Review the underlying actions before attributing the movement to a program decision.`,x);
-  if(obligationSelected&&(view!=='trend'||selected||metric==='obligations')&&x.obligations!=null&&x.updated>0&&(x.obligations/x.updated>1||x.obligations/x.updated<.9))
+  if(obligationSelected&&(view!=='trend'||selected||metric==='budget')&&x.obligations!=null&&x.updated>0&&(x.obligations/x.updated>1||x.obligations/x.updated<.9))
    add(`FY${fy}: review the obligation rate`,`${rateText(x)} falls outside this prototype’s 90–100% review range. Check the report’s funding scope and adjustments before interpreting it as underexecution or overexecution. Without a spending plan, this is not a performance assessment.`,x);
-  if(congressSelected&&(view!=='trend'||selected||['budget','congress'].includes(metric))&&x.congressDetails?.items?.length){
+  if(congressSelected&&(view!=='trend'||selected||['budget','changes'].includes(metric))&&x.congressDetails?.items?.length){
    const items=x.congressDetails.items,pos=items.filter(i=>i.value>0).reduce((s,i)=>s+i.value,0),neg=items.filter(i=>i.value<0).reduce((s,i)=>s+i.value,0);
    if(pos&&neg&&Math.min(pos,-neg)>Math.abs(pos+neg)*.25)add(`FY${fy}: congressional actions move in both directions`,`The loaded action detail includes ${fmt(pos)} in additions and ${fmt(neg)} in reductions. The net alone understates the scale of individual congressional decisions; review the action purposes in the reporting panel.`,x.congressDetails);
    const temp=items.find(i=>/one.time|temporary|non.recurring/i.test(i.label));
@@ -37,7 +37,7 @@ function renderInsights(){
   }
  }
  if(view==='trend'&&!selected&&observations.length>=3){
-  for(const key of metric==='congress'?['congress']:metric==='adjustments'?['adjustments']:metric==='budget'?['congress','adjustments']:[]){
+  for(const key of ['budget','changes'].includes(metric)?['congress','adjustments']:[]){
    const vals=observations.filter(x=>x.e[key]!=null);
    if(vals.length===observations.length&&(vals.every(x=>x.e[key]>0)||vals.every(x=>x.e[key]<0)))add(`Repeated ${vals[0].e[key]>0?'additions':'reductions'} across selected years`,`${key==='congress'?'Congressional Action':'Reprogramming / Adjustments'} has the same net direction in all ${vals.length} available selected years. This suggests a recurring pattern worth investigating, but does not establish that the same actions or causes recur.`,vals[vals.length-1].e);
   }
@@ -101,4 +101,5 @@ function relatedDifferences(y,e){
  if(!peer)return '';
  return `<section class="related-differences"><h3>Related reconciliation differences · FY${y}</h3><div class="difference-pair">${[[entity,e],[peer[0].slice(5),peer[1]]].map(([id,r])=>`<div><span class="difference-label">SAG ${id} · ${esc(data.entities[id])}</span><strong>${reportValue(r.adjustments-r.reportedAdjustments,true)}</strong>${reportRef(r,'Execution source')}</div>`).join('')}</div><p class="footnote">Difference = (Updated Budget − Enacted) − listed adjustment components. These equal and opposite differences occur within the same Budget Activity; that does not establish a transfer or explain their cause.</p></section>`;
 }
+
 

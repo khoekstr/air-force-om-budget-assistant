@@ -16,7 +16,7 @@ function guideAnswer(topic,ba){
  if(topic==='trend'){
   const years=[2021,2022,2023,2024,2025,2026,2027].filter(fy=>!guideYear||fy<=guideYear);
   const id=ba||'3400';
-  return `<p>Follow the Budget Request, Enacted funding, and Updated Budget across available years for ${esc(name(id))}. Comparing these positions shows whether a movement began in the request, in congressional decisions, or after enactment.</p><p>Start with the overall trend, then select a bar for its documented explanation. Missing positions are not treated as zero; amounts are nominal dollars.</p>${guideLink({view:'trend',entity:id,metric:'budget',years,year:years.at(-1)},'Explore funding over time')}<p class="guide-disclosure">Requested funding is available through FY2027; year-end execution through FY2025. Each series keeps its own reporting basis.</p>`;
+  return `<p>Follow the Budget Request, Enacted funding, Updated Budget, and Obligations across available years for ${esc(name(id))}. The first three are funding positions; Obligations show legal commitments of funds. Switch to Budget Changes to compare Congressional Action with Reprogramming / Adjustments.</p><p>Start with the overall trend, then select a bar for its documented explanation. Missing positions are not treated as zero; amounts are nominal dollars.</p>${guideLink({view:'trend',entity:id,metric:'budget',years,year:years.at(-1)},'Explore funding over time')}<p class="guide-disclosure">Requested funding is available through FY2027; year-end execution through FY2025. Each series keeps its own reporting basis.</p>`;
  }
  if(topic==='adjustments'){
   const entries=guideEntries('execution',ba).filter(x=>x.r.adjustments!=null).sort((a,b)=>Math.abs(b.r.adjustments)-Math.abs(a.r.adjustments)).slice(0,3);
@@ -92,7 +92,7 @@ function guideRoute(){
  view=['single','bridge','trend'].includes(p.get('view'))?p.get('view'):'single';
  year=Math.max(view==='bridge'?2022:2021,Math.min(2027,Number(p.get('year'))||2025));
  entity=data.entities[p.get('entity')]?p.get('entity'):'3400';
- metric=['budget','obligations','congress','adjustments'].includes(p.get('metric'))?p.get('metric'):'budget';
+ metric=['changes','congress','adjustments'].includes(p.get('metric'))?'changes':'budget';
  selectedYears=[...new Set((p.has('years')?p.get('years'):'2021,2022,2023,2024,2025').split(',').map(Number).filter(y=>Number.isInteger(y)&&y>=2021&&y<=2027))];
  if(!selectedYears.length&&!p.has('years'))selectedYears=[year];
  $('units').value=['1','1000'].includes(p.get('units'))?p.get('units'):'1000';
@@ -120,4 +120,5 @@ function initGuide(){
  $('clear-view-settings').onclick=()=>{savedViews={};try{sessionStorage.removeItem(sessionKey);}catch{}location.hash=guideHref({view,year:2025,entity:'3400',metric:'budget',years:[2021,2022,2023,2024,2025],units:'1000'});guideRoute();};
  window.addEventListener('hashchange',guideRoute);guideRoute();
 }
+
 
