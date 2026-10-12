@@ -1,7 +1,7 @@
 /* Level-aware reporting: summary first, source detail on demand. */
 function reportContext(){const y=selected?.year??year;return {y,stage:selected?(selected.stage||selected.label):null,e:data.execution[`${y}-${entity}`],b:data.bridges[`${y}-${entity}`]}}
 function reportRef(r,label){return r?.source?`<p class="report-source">${sourceLink(r,label||`Source · PDF p. ${r.page}`)}</p>`:''}
-function reportValue(v,signed=false){return v==null?'not reported':`${amount(v,signed)} ${unit()}`}
+function reportValue(v,signed=false){return v==null?'not reported':`${money(v,signed)}`}
 function reportMore(title,html){return `<details class="report-group"><summary>${esc(title)}</summary>${html}</details>`}
 function reportBrief(text,count=2){return text.split(/(?<=[.!?])\s+(?=[A-Z])/).slice(0,count).join(' ').trim()}
 function reportComponents(items){return items?.length?'<ul class="component-list">'+items.map(i=>`<li><strong>${reportValue(i.value,true)}</strong><span>${esc(i.label)}</span></li>`).join('')+'</ul>':'<p>Individual actions are not established at this level.</p>'}
@@ -90,7 +90,7 @@ function bridgeRelationship(y,b){
 }
 function baselineReport(y,b){
  let html=`<p>The J-book moves from <strong>${reportValue(b.start)}</strong>, through <strong>${reportValue(b.adjustments,true)}</strong> in baseline adjustments, to its normalized comparison baseline of <strong>${reportValue(b.baseline)}</strong>, before next-year price, transfer, and program changes.</p>`;
- if(y===2026&&entity==='021A')html+=`<h4>Documented baseline components</h4>${reportComponents([{value:350000,label:'Fact-of-life changes — one-time Presidential Airlift Support Requirement funding; classified in Enacted in the year-end report.'}])}<p><strong>Supplemental funding: approximately 3.3 $M (3,300 $K).</strong> This is the rounded component identified in the dashboard’s source note. Its specific purpose is not established by the loaded detail.</p>`;
+ if(y===2026&&entity==='021A')html+=`<h4>Documented baseline components</h4>${reportComponents([{value:350000,label:'Fact-of-life changes — one-time Presidential Airlift Support Requirement funding; classified in Enacted in the year-end report.'}])}<p><strong>Supplemental funding: approximately $3.3M.</strong> This component is rounded for display. Its specific purpose is not established by the loaded detail.</p>`;
  else if(b.baselineDetails?.items?.length)html+=reportComponents(b.baselineDetails.items);
  else html+='<p>The net adjustment is calculated from the two reported positions. Individual components and their purposes are not established in the loaded detail; consult the cited J-book reconciliation.</p>';
  return html+reportRef(b,`FY${y} J-book · OP-5, ${entity} · PDF p. ${b.page}`)+bridgeRelationship(y,b)+'<p class="footnote">Totals use source precision; displayed component amounts are rounded.</p>';
