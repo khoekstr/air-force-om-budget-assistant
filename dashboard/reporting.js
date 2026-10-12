@@ -69,7 +69,7 @@ function stageReport(stage,y,e,b){
  if(stage==='Reprogramming / Adjustments')return adjustmentReport(e);
  if(stage==='Enacted')return `<p>Enacted funding reflects the Budget Request plus ${reportValue(e?.congress,true)} in Congressional Action.</p>`+reportMore('Congressional action detail',congressReport(y,e));
  if(stage==='Updated Budget')return `<p>Updated Budget reflects Enacted funding plus ${reportValue(e?.adjustments,true)} in Reprogramming / Adjustments.</p>`+reportMore('Adjustment detail',adjustmentReport(e));
- if(stage==='Obligations')return `<p>Obligations were recorded as of September 30, ${y}.${e?.updated>0?` The obligation rate was ${rateText(e)}.`:''} Individual commitments are not itemized in this report.</p>`;
+ if(stage==='Obligations')return `<p>Obligations were recorded as of September 30, ${y}.${e?.updated>0?` The obligation rate was ${rateText(e)}.`:''} Individual obligations are not itemized in this report.</p>`;
  if(view==='bridge'&&b){
   const type=selected?.type;
   if(['increase','decrease'].includes(type))return '<p>These are changes to program requirements, including any removal of temporary funding.</p>'+documentedDrivers(y,b.summaryOnly?null:type);
@@ -104,7 +104,7 @@ function renderReport(){
   $('show-overview').hidden=false;
  }else if(view==='bridge'&&b){
   $('narrative-title').textContent='What changed';
-  $('narrative').innerHTML=`<p>The request changed by ${reportValue(b.request-b.start,true)}: ${reportValue(b.price,true)} in price and ${reportValue(b.program,true)} in net program changes${!b.summaryOnly&&b.transfers?`, with ${reportValue(b.transfers,true)} in transfers`:''}.</p>`+(b.adjustments?`<p>Baseline adjustments of ${reportValue(b.adjustments,true)} are also included in that overall change. Select that bar for the comparison baseline and its source detail.</p>`:'')+reportMore('How this J-book relates to One Year’s Budget',bridgeRelationship(y,b))+reportDrill(y)+documentedDrivers(y);
+  $('narrative').innerHTML=`<p>The request changed by ${reportValue(b.request-b.start,true)}: ${reportValue(b.price,true)} in price and ${reportValue(b.program,true)} in net program changes${!b.summaryOnly&&b.transfers?`, with ${reportValue(b.transfers,true)} in transfers`:''}.</p>`+(b.adjustments?`<p>Baseline adjustments of ${reportValue(b.adjustments,true)} are also included in that overall change. Select that bar for the comparison baseline and its source detail.</p>`:'')+reportMore('How this J-book relates to One Year',bridgeRelationship(y,b))+reportDrill(y)+documentedDrivers(y);
  }else if(view==='single'&&e){
   $('narrative-title').textContent='Funding summary';
   $('narrative').innerHTML=requestText(y)+reportDrill(y);

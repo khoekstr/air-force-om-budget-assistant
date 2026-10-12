@@ -16,7 +16,7 @@ function guideAnswer(topic,ba){
  if(topic==='trend'){
   const years=[2021,2022,2023,2024,2025,2026,2027].filter(fy=>!guideYear||fy<=guideYear);
   const id=ba||'3400';
-  return `<p>Follow the Budget Request, Enacted funding, Updated Budget, and Obligations across available years for ${esc(name(id))}. The first three are funding positions; Obligations show legal commitments of funds. Switch to Budget Changes to compare Congressional Action with Reprogramming / Adjustments.</p><p>Start with the overall trend, then select a bar for its documented explanation. Missing positions are not treated as zero; amounts are nominal dollars.</p>${guideLink({view:'trend',entity:id,metric:'budget',years,year:years.at(-1)},'Explore funding over time')}<p class="guide-disclosure">Requested funding is available through FY2027; year-end execution through FY2025. Each series keeps its own reporting basis.</p>`;
+  return `<p>Follow the Budget Request, Enacted funding, Updated Budget, and Obligations across available years for ${esc(name(id))}. The first three are funding positions; Obligations show legal commitments of funds. Switch to Budget Changes to compare Congressional Action with Reprogramming / Adjustments.</p><p>Start with the overall trend, then select a bar for its documented explanation. Missing positions are not treated as zero; amounts are nominal dollars.</p>${guideLink({view:'trend',entity:id,metric:'budget',years,year:years.at(-1)},'Explore Multi-Year')}<p class="guide-disclosure">Requested funding is available through FY2027; year-end execution through FY2025. Each series keeps its own reporting basis.</p>`;
  }
  if(topic==='adjustments'){
   const entries=guideEntries('execution',ba).filter(x=>x.r.adjustments!=null).sort((a,b)=>Math.abs(b.r.adjustments)-Math.abs(a.r.adjustments)).slice(0,3);
@@ -122,3 +122,7 @@ function initGuide(){
 }
 
 
+
+const budgetFlowDialog=$('budget-flow-dialog');
+document.querySelector('.budget-flow-preview').addEventListener('click',e=>{e.preventDefault();budgetFlowDialog.showModal();});
+$('close-budget-flow').onclick=()=>budgetFlowDialog.close();
