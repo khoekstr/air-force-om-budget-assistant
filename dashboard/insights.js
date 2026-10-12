@@ -80,7 +80,7 @@ function syncBudgetLevels(){
  $('af-overall').onclick=()=>setBudgetLevel('3400');if($('ba-summary'))$('ba-summary').onclick=()=>setBudgetLevel(ba);
 }
 function renderParentBridge(b){
- $('view-kicker').textContent='J BOOK VIEW';$('chart-title').textContent=`FY${year-1} to FY${year} · ${data.entities[entity]}`;
+ $('view-kicker').textContent='J BOOK VIEW';$('chart-title').textContent=`FY${year-1} to FY${year} · ${budgetAreaName(entity)}`;
  $('chart-subtitle').textContent='Follow the J-book: its prior-year snapshot and new request. This summary combines program changes.';
  rows=[makeRow(year===2025?'FY2024 estimate':`FY${year-1} source baseline`,b.start),makeRow('Price changes',b.price,'price',true),makeRow('Net program changes',b.program,b.program<0?'decrease':'increase',true)];
  if(b.rounding)rows.push(makeRow('Source rounding',b.rounding,'rounding',true));rows.push(makeRow(`FY${year} request`,b.request));

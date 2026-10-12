@@ -1,10 +1,11 @@
 /* Level-aware reporting: summary first, source detail on demand. */
+function budgetAreaName(id){const name=data.entities[id]||id;return /^0[1-4][0-9][A-Z]$/.test(id)?`SAG ${id} · ${name}`:name}
 function reportContext(){const y=selected?.year??year;return {y,stage:selected?(selected.stage||selected.label):null,e:data.execution[`${y}-${entity}`],b:data.bridges[`${y}-${entity}`]}}
 function reportRef(r,label){return r?.source?`<p class="report-source">${sourceLink(r,label||`Source · PDF p. ${r.page}`)}</p>`:''}
 function reportValue(v,signed=false){return v==null?'not reported':`${money(v,signed)}`}
 function reportMore(title,html){return `<details class="report-group"><summary>${esc(title)}</summary>${html}</details>`}
 function reportBrief(text,count=2){return text.split(/(?<=[.!?])\s+(?=[A-Z])/).slice(0,count).join(' ').trim()}
-function reportComponents(items){return items?.length?'<ul class="component-list">'+items.map(i=>`<li><strong>${reportValue(i.value,true)}</strong><span>${esc(i.label)}</span></li>`).join('')+'</ul>':'<p>Individual actions are not established at this level.</p>'}
+function reportComponents(items){return items?.length?'<ul class="component-list">'+[...items].sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).map(i=>`<li><strong>${reportValue(i.value,true)}</strong><span>${esc(i.label)}</span></li>`).join('')+'</ul>':'<p>Individual actions are not established at this level.</p>'}
 function requestText(y){
  const n=data.requestNarratives?.[`${y}-${entity}`];
  if(!n)return '<p>A request narrative is not available at this level. See the source document.</p>';
@@ -20,6 +21,11 @@ function reportDrill(y,stage){
   const e=data.execution[`${y}-${id}`],b=data.bridges[`${y}-${id}`];
   const bridgeKey={price:'price',transfer:'transfers',increase:'program',decrease:'program',adjust:'adjustments'}[selected?.type];
   const val=view==='bridge'?(bridgeKey?b?.[bridgeKey]:selected?.type==='position'?(stage===`FY${y} request`?b?.request:b?.start):b?.request-b?.start):key?e?.[key]:null;
+  return {id,e,b,bridgeKey,val};
+ }).sort((a,b)=>{
+  const changes=view==='bridge'?selected?.type!=='position':['congress','adjustments'].includes(key);
+  return changes?(Number.isFinite(b.val)?Math.abs(b.val):-1)-(Number.isFinite(a.val)?Math.abs(a.val):-1):0;
+ }).map(({id,e,b,bridgeKey,val})=>{
   const label=Number.isFinite(val)?` · ${reportValue(val,view==='bridge'||['congress','adjustments'].includes(key))}`:'';
   if(entity==='3400'){
    const missions={BA01:'Funds combat and air operations, flying hours, and the bases and support that sustain operational forces.',BA02:'Funds global mobility: moving and sustaining forces, cargo, and personnel for military and humanitarian missions.',BA03:'Funds initial and specialized skills training, flight training, and professional education throughout an Airman’s career.',BA04:'Funds logistics, servicewide support, security programs, and support to other nations.'};
@@ -32,20 +38,21 @@ function reportDrill(y,stage){
     else if(key==='obligations')detail+=` Obligations were ${reportValue(val)}${e?.updated>0?`, or ${rateText(e)} of Updated Budget`:''}.`;
     else detail+=` ${stage} was ${reportValue(val)}.`;
    }
-   return `<li class="ba-summary"><strong>${esc(data.entities[id])}</strong><p>${esc(detail)}</p></li>`;
+   return `<li class="ba-summary"><strong>${esc(budgetAreaName(id))}</strong><p>${esc(detail)}</p></li>`;
   }
-  return `<li><span>${esc(data.entities[id])}</span>${label}</li>`;
+  return `<li><span>${esc(budgetAreaName(id))}</span>${label}</li>`;
  }).join('');
  let html=`<ul class="level-links">${items}</ul>`;
  if(entity==='3400'){
   const refs=ids.map(id=>{const n=data.requestNarratives?.[`${y}-${id}`];return n?reportRef({...n,page:n.sections[0].page},`${data.entities[id]} · J-book · PDF p. ${n.sections[0].page}`):''}).join('');
   if(refs)html+=reportMore('BA summary sources',refs);
  }
+ if(view==='bridge'&&selected?.type!=='position'||['congress','adjustments'].includes(key))html='<p class="footnote">Largest changes first, ranked by absolute dollar amount.</p>'+html;
  return entity==='3400'?`<h4>${view==='bridge'&&!selected?'Changes by Budget Activity':'By Budget Activity'}</h4>${html}`:reportMore('Subactivity Group summary',html);
 }
 function documentedDrivers(y,type=null){
  if(entity==='3400'||/^BA0[1-4]$/.test(entity))return '';
- const b=data.bridges[`${y}-${entity}`],ds=(b?.drivers||[]).filter(d=>!type||type==='increase'&&d.amount>0||type==='decrease'&&d.amount<0||type==='transfer'&&d.kind==='transfer');
+ const b=data.bridges[`${y}-${entity}`],ds=(b?.drivers||[]).filter(d=>!type||type==='increase'&&d.amount>0||type==='decrease'&&d.amount<0||type==='transfer'&&d.kind==='transfer').sort((a,b)=>Math.abs(b.amount)-Math.abs(a.amount));
  if(!ds.length)return '';
  const html=ds.map(d=>reportMore(`${d.title} · ${reportValue(d.amount,true)}`,`<p>${esc(d.description)}</p>${reportRef({source:d.source||b.source,page:d.page||b.page},`J-book · PDF p. ${d.page||b.page}`)}`)).join('');
  return reportMore(`Documented program changes (${ds.length})`,html);
@@ -137,7 +144,7 @@ function trendDriverHighlights(metric){
    const ids=entity==='3400'?['BA01','BA02','BA03','BA04']:[entity];
    for(const id of ids){const e=data.execution[`${y}-${id}`];if(!e)continue;
     if(metric==='adjustments')for(const d of e.adjustmentDetails||[])if(d.value)entries.push({title:d.label,value:d.value,y,id,detail:'The execution report identifies this adjustment type; the purpose of individual actions is not established.',ref:e});
-    if(metric==='obligations'&&e.obligations!=null)entries.push({title:data.entities[id],value:e.obligations,y,id,detail:e.updated>0?`Obligation rate: ${rateText(e)} of Updated Budget.`:'Updated Budget is not available for a rate calculation.',ref:e});
+    if(metric==='obligations'&&e.obligations!=null)entries.push({title:budgetAreaName(id),value:e.obligations,y,id,detail:e.updated>0?`Obligation rate: ${rateText(e)} of Updated Budget.`:'Updated Budget is not available for a rate calculation.',ref:e});
    }
   }
  }
@@ -146,7 +153,7 @@ function trendDriverHighlights(metric){
  const title=metric==='budget'?'Selected drivers of request changes':metric==='congress'?'Selected congressional funding drivers':metric==='adjustments'?'Largest reported adjustment components':'Largest obligation observations';
  const note=metric==='budget'?'Up to five large J-book program changes, ranked by absolute dollars. These explain changes to requests, not the full budgets.':metric==='congress'?'Up to five large documented actions, ranked by absolute dollars. These are selected components, not a reconciliation of the yearly totals.':metric==='adjustments'?'Up to five large reported components. These identify adjustment types, not the underlying purposes.':'Up to five large funding-area observations. These show where obligations were recorded, not what caused their level.';
  return `<section class="trend-drivers"><h4>${title}</h4><p class="footnote">${note} They are not intended to add to the graph totals.</p><ol class="driver-highlights">${shown.map(d=>{
-  const area=entity==='3400'?(data.entities[parentBA(d.id)]||data.entities[d.id]):data.entities[d.id];
+  const area=budgetAreaName(d.id);
   const summary=metric==='budget'?reportBrief(d.detail,1):metric==='congress'?`Reported Congressional Action in ${area}.`:d.detail;
   return `<li><div class="driver-highlight-heading"><strong>${esc(d.title)}</strong><span>${reportValue(d.value,metric!=='obligations')}</span></div><small>FY${d.y} · ${esc(area)}</small><p>${esc(summary)}</p>${reportMore('Source detail',`${metric==='budget'||metric==='congress'?`<p>${esc(d.detail)}</p>`:''}${reportRef(d.ref,`FY${d.y} source detail · PDF p. ${d.ref.page}`)}`)}</li>`;
  }).join('')}</ol></section>`;
