@@ -1,7 +1,7 @@
 /* A deterministic guided conversation; all results use the dashboard's source data. */
 let guideYear=null,guideRouting=false;
 const guideTopics={sources:'Why do the documents show different figures?',terms:'What do the terms mean?',trend:'How has funding changed over time?',adjustments:'How did funding change after enactment?',changes:'What changed most?',congress:'Where did Congress add or reduce funding?',attention:'What deserves a closer look?',patterns:'What patterns repeat?',explore:'Help me explore a budget area'};
-function guideMoney(n){return `${n>0?'+':''}${(n/1000).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})} $M`}
+function guideMoney(n){return `${n<0?'-':n>0?'+':''}$${(Math.abs(n)/1000).toLocaleString('en-US',{minimumFractionDigits:1,maximumFractionDigits:1})}M`}
 function guideHref(o={}){return '#dashboard?'+new URLSearchParams({view:o.view||'single',year:String(o.year||guideYear||2025),entity:o.entity||'3400',metric:o.metric||'budget',...(o.stage?{stage:o.stage}:{}),...(o.years?{years:o.years.join(',')}:{}),...(o.figureYear?{figureYear:String(o.figureYear)}:{}),...(o.units?{units:String(o.units)}:{})}).toString()}
 function guideLink(o,label='Explore in dashboard'){return `<a class="guide-detail" href="${esc(guideHref(o))}">${esc(label)}</a>`}
 function guideSource(r){return r?.source?`<a class="guide-source" href="${esc(r.source)}#page=${r.page}" target="_blank" rel="noopener">Source · PDF p. ${r.page}</a>`:''}
